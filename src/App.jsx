@@ -305,7 +305,7 @@ Roast me. Then save me.`;
         {step === "result" && result && (
           <div style={{ paddingTop: "48px" }}>
             {/* Score */}
-            <div style={{ background: "rgba(255,45,85,0.06)", border: "1px solid rgba(255,45,85,0.2)", borderRadius: "16px", padding: "32px", marginBottom: "20px", textAlign: "center", animation: "fadeUp 0.5s ease both" }}>
+            <div style={{ background: "rgba(255,45,85,0.06)", border: "1px solid rgba(255,45,85,0.2)", borderRadius: "16px", padding: "32px", marginBottom: "20px", textAlign: "center", animation: "fadeUp 0.5s ease forwards" }}>
               <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(240,234,214,0.35)", margin: "0 0 16px" }}>Your Chaos Score</p>
               <div style={{ position: "relative", display: "inline-block", marginBottom: "14px" }}>
                 <svg width="110" height="110" viewBox="0 0 90 90">
@@ -330,7 +330,7 @@ Roast me. Then save me.`;
             </div>
 
             {/* Red Flags */}
-            <div style={{ ...{ background: "rgba(255,159,10,0.05)", border: "1px solid rgba(255,159,10,0.15)" }, borderRadius: "16px", padding: "28px", marginBottom: "20px", animation: "fadeUp 0.5s 0.1s ease both" }}>
+            <div style={{ ...{ background: "rgba(255,159,10,0.05)", border: "1px solid rgba(255,159,10,0.15)" }, borderRadius: "16px", padding: "28px", marginBottom: "20px", animation: "fadeUp 0.5s 0.1s ease forwards" }}>
               <p className="label" style={{ color: "rgba(255,159,10,0.55)" }}>🚩 Red Flags</p>
               {result.redFlags.map((flag, i) => (
                 <div key={i} style={{ display: "flex", gap: "10px", marginTop: i === 0 ? 0 : "10px" }}>
@@ -341,7 +341,7 @@ Roast me. Then save me.`;
             </div>
 
             {/* Plan */}
-            <div style={{ background: "rgba(48,209,88,0.04)", border: "1px solid rgba(48,209,88,0.15)", borderRadius: "16px", padding: "28px", marginBottom: "20px", animation: "fadeUp 0.5s 0.2s ease both" }}>
+            <div style={{ background: "rgba(48,209,88,0.04)", border: "1px solid rgba(48,209,88,0.15)", borderRadius: "16px", padding: "28px", marginBottom: "20px", animation: "fadeUp 0.5s 0.2s ease forwards" }}>
               <p className="label" style={{ color: "rgba(48,209,88,0.55)" }}>📋 Your 90-Day Rescue Plan</p>
               {result.plan.map((s, i) => (
                 <div key={i} style={{ display: "flex", gap: "14px", marginTop: i === 0 ? 0 : "18px" }}>
@@ -355,7 +355,7 @@ Roast me. Then save me.`;
             </div>
 
             {/* Verdict */}
-            <div style={{ background: "linear-gradient(135deg,rgba(255,45,85,0.07),rgba(255,159,10,0.04))", border: "1px solid rgba(255,45,85,0.18)", borderRadius: "16px", padding: "24px", marginBottom: "20px", textAlign: "center", animation: "fadeUp 0.5s 0.3s ease both" }}>
+            <div style={{ background: "linear-gradient(135deg,rgba(255,45,85,0.07),rgba(255,159,10,0.04))", border: "1px solid rgba(255,45,85,0.18)", borderRadius: "16px", padding: "24px", marginBottom: "20px", textAlign: "center", animation: "fadeUp 0.5s 0.3s ease forwards" }}>
               <p className="label">⚖️ Final Verdict</p>
               <p style={{ margin: 0, fontSize: "16px", lineHeight: 1.6, fontStyle: "italic" }}>"{result.verdict}"</p>
             </div>
@@ -370,7 +370,7 @@ Roast me. Then save me.`;
             </div>
 
             {/* Roast again */}
-            <div style={{ textAlign: "center", animation: "fadeUp 0.5s 0.5s ease both" }}>
+            <div style={{ textAlign: "center", animation: "fadeUp 0.5s 0.5s ease forwards" }}>
               <button className="btn" onClick={() => { setStep("form"); setResult(null); setFormData({ job: "", relationship: "", finances: "", goals: "", wildcard: "" }); }}>
                 Roast someone else →
               </button>
