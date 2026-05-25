@@ -215,8 +215,8 @@ Roast me. Then save me.`;
         .btn { background: #ff2d55; color: #fff; border: none; border-radius: 8px; padding: 16px 40px; font-family: Georgia, serif; font-size: 17px; font-weight: bold; cursor: pointer; transition: all 0.2s; }
         .btn:hover { background: #ff0a3c; transform: translateY(-1px); box-shadow: 0 8px 32px rgba(255,45,85,0.35); }
         .btn:disabled { background: rgba(255,45,85,0.3); cursor: not-allowed; transform: none; box-shadow: none; }
-        .fade { animation: fadeUp 0.5s ease both; }
-        .section { background: rgba(240,234,214,0.03); border: 1px solid rgba(240,234,214,0.08); border-radius: 16px; padding: 28px; margin-bottom: 20px; animation: fadeUp 0.5s ease both; }
+        .fade { animation: fadeUp 0.5s ease forwards; }
+        .section { background: rgba(240,234,214,0.03); border: 1px solid rgba(240,234,214,0.08); border-radius: 16px; padding: 28px; margin-bottom: 20px; animation: fadeUp 0.5s ease forwards; }
         .label { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: rgba(240,234,214,0.4); margin-bottom: 8px; }
       `}</style>
 
