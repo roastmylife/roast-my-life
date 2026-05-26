@@ -169,7 +169,7 @@ export default function VillainEra() {
       overflowX: "hidden",
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap');
+        
         * { box-sizing: border-box; }
         ::selection { background: rgba(192,132,252,0.3); }
         @keyframes fadeUp { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:translateY(0); } }
@@ -458,3 +458,4 @@ export default function VillainEra() {
     </div>
   );
 }
+
