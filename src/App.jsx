@@ -1,233 +1,456 @@
 import { useState, useEffect, useRef } from "react";
 
-const ROAST_SYSTEM = `You are a brutally honest, wickedly funny life coach who roasts people's life situations before giving them a real plan.
+const SYSTEM = `You are the voice inside someone's head that finally tells the truth — cold, clear, powerful. You help people who have been walked on, silenced, manipulated, or ignored reclaim their power.
 
-Your response MUST be a JSON object with exactly this structure:
+The user will describe a situation where they were a people pleaser, got taken advantage of, stayed silent when they shouldn't have, or let someone walk over them.
+
+Your response MUST be a JSON object with this EXACT structure:
 {
-  "roastTitle": "A savage 6-8 word title for their situation",
-  "roastLines": ["line1", "line2", "line3", "line4"],
-  "savageScore": 75,
-  "savageScoreLabel": "Certified Disaster",
-  "redFlags": ["flag1", "flag2", "flag3"],
-  "plan": [
-    {"day": "Days 1-7", "action": "specific action", "why": "reason"},
-    {"day": "Days 8-30", "action": "specific action", "why": "reason"},
-    {"day": "Days 31-90", "action": "specific action", "why": "reason"}
-  ],
-  "verdict": "A 1-sentence brutal but loving final verdict",
-  "shareQuote": "The most quotable line from the roast"
+  "diagnosis": "A razor-sharp 1-sentence naming of exactly what happened to them (e.g. 'You let someone else's comfort become more important than your own dignity')",
+  "villainScore": <number 1-100, how much they need to enter their villain era, 100 = completely cooked>,
+  "villainTitle": "Their villain era title (e.g. 'The Unbothered', 'The Unforgiving', 'The Silent Storm')",
+  "whatTheyActuallyFelt": "What they were ACTUALLY feeling but never said — raw and real, 2-3 sentences",
+  "rewrite": "The EXACT words they should have said or could say now — powerful, calm, devastating in the best way. 3-5 sentences. No screaming, no drama. Ice cold power.",
+  "theyWereWrong": ["specific thing person did wrong #1", "specific thing #2", "specific thing #3"],
+  "boundaries": ["Boundary to set going forward #1", "Boundary #2", "Boundary #3"],
+  "mantra": "Their personal villain era mantra — 6-10 words, poetic, powerful, theirs forever",
+  "shareQuote": "The single most powerful quotable line from the rewrite or diagnosis — for sharing"
 }
-Return ONLY the JSON object, no markdown, no preamble.`;
 
-function PaywallModal({ onClose }) {
-  const [loading, setLoading] = useState(false);
-  const handleSubscribe = async () => {
-    setLoading(true);
-    try {
-      const res = await fetch("/api/create-checkout", { method: "POST" });
-      const data = await res.json();
-      if (data.url) window.location.href = data.url;
-    } catch {
-      alert("Something went wrong. Please try again.");
-      setLoading(false);
-    }
-  };
+Be COLD. Be CLEAR. Be on THEIR SIDE completely. No victim-blaming. No "but consider their perspective." This is not therapy — this is someone finally being told they deserved better. The rewrite should make them feel like they just put on armor.
+
+Return ONLY the JSON. No markdown. No preamble.`;
+
+const CURSES = [
+  "They had no right.",
+  "You already knew.",
+  "The silence was never yours to keep.",
+  "You were never too much. They were just too small.",
+  "Peace is not the same as surrender.",
+  "Soft is not the same as weak.",
+  "Your discomfort was data. You ignored it.",
+  "You owe no one your smallness.",
+];
+
+const TITLES = [
+  "The Unbothered", "The Unforgiving", "The Silent Storm",
+  "The Immovable", "The Untouchable", "The Last Word",
+  "The Reclaimed", "The Uncolonized"
+];
+
+function GlitchText({ text, active }) {
+  const [glitched, setGlitched] = useState(text);
+  const chars = "アイウエオカキクケコ#@$%&*!?ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  useEffect(() => {
+    if (!active) { setGlitched(text); return; }
+    let iterations = 0;
+    const interval = setInterval(() => {
+      setGlitched(text.split("").map((char, i) => {
+        if (i < iterations) return char;
+        if (char === " ") return " ";
+        return chars[Math.floor(Math.random() * chars.length)];
+      }).join(""));
+      iterations += 1.5;
+      if (iterations > text.length) clearInterval(interval);
+    }, 40);
+    return () => clearInterval(interval);
+  }, [text, active]);
+  return <span>{glitched}</span>;
+}
+
+function ScoreRing({ score, color }) {
+  const r = 54;
+  const circ = 2 * Math.PI * r;
+  const [offset, setOffset] = useState(circ);
+  useEffect(() => {
+    setTimeout(() => setOffset(circ - (circ * score / 100)), 300);
+  }, [score]);
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
-      <div style={{ background: "#111", border: "1px solid rgba(255,45,85,0.3)", borderRadius: "20px", padding: "40px 36px", maxWidth: "420px", width: "100%", textAlign: "center", fontFamily: "Georgia, serif", color: "#f0ead6" }}>
-        <div style={{ fontSize: "48px", marginBottom: "16px" }}>🔥</div>
-        <h2 style={{ fontSize: "26px", margin: "0 0 10px" }}>You used your free roast</h2>
-        <p style={{ color: "rgba(240,234,214,0.55)", margin: "0 0 28px", fontSize: "15px" }}>Unlimited roasts for $4.99/month</p>
-        <div style={{ fontSize: "36px", fontWeight: "bold", color: "#ff2d55", marginBottom: "4px" }}>$4.99/mo</div>
-        <button onClick={handleSubscribe} disabled={loading} style={{ background: "#ff2d55", color: "#fff", border: "none", borderRadius: "10px", padding: "16px", width: "100%", fontSize: "16px", fontWeight: "bold", fontFamily: "Georgia, serif", cursor: "pointer", margin: "20px 0 12px" }}>
-          {loading ? "Redirecting..." : "Subscribe now →"}
-        </button>
-        <button onClick={onClose} style={{ background: "none", border: "none", color: "rgba(240,234,214,0.3)", fontSize: "13px", cursor: "pointer", fontFamily: "Georgia, serif" }}>Maybe later</button>
-      </div>
-    </div>
+    <svg width="140" height="140" viewBox="0 0 140 140">
+      <circle cx="70" cy="70" r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="6" />
+      <circle cx="70" cy="70" r={r} fill="none" stroke={color} strokeWidth="6"
+        strokeLinecap="round" strokeDasharray={circ} strokeDashoffset={offset}
+        transform="rotate(-90 70 70)"
+        style={{ transition: "stroke-dashoffset 2s cubic-bezier(0.19,1,0.22,1)" }} />
+      <text x="70" y="65" textAnchor="middle" fill={color} fontSize="28" fontWeight="900" fontFamily="'Cormorant Garamond', serif">{score}</text>
+      <text x="70" y="82" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="11" fontFamily="'Cormorant Garamond', serif">VILLAIN SCORE</text>
+    </svg>
   );
 }
 
-export default function App() {
+export default function VillainEra() {
   const [step, setStep] = useState("intro");
-  const [form, setForm] = useState({ job: "", relationship: "", finances: "", goals: "", wildcard: "" });
+  const [situation, setSituation] = useState("");
+  const [who, setWho] = useState("");
   const [result, setResult] = useState(null);
   const [error, setError] = useState("");
-  const [timer, setTimer] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadMsg, setLoadMsg] = useState(0);
   const [copied, setCopied] = useState(false);
+  const [revealStep, setRevealStep] = useState(0);
   const [showPaywall, setShowPaywall] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
+  const [curseIdx, setCurseIdx] = useState(0);
+  const [glitchActive, setGlitchActive] = useState(false);
   const timerRef = useRef(null);
+
+  const loadMessages = [
+    "Reading between every line...",
+    "Finding what you couldn't say...",
+    "Sharpening your armor...",
+    "Rewriting the story...",
+    "Your villain era begins now.",
+  ];
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const sessionId = params.get("session_id");
-    if (sessionId) {
-      fetch(`/api/verify-session?session_id=${sessionId}`).then(r => r.json()).then(data => {
-        if (data.unlocked) { localStorage.setItem("roast_unlocked", "true"); setUnlocked(true); window.history.replaceState({}, "", "/"); }
+    const sid = params.get("session_id");
+    if (sid) {
+      fetch(`/api/verify-session?session_id=${sid}`).then(r => r.json()).then(d => {
+        if (d.unlocked) { localStorage.setItem("villain_unlocked", "true"); setUnlocked(true); window.history.replaceState({}, "", "/"); }
       });
-    } else if (localStorage.getItem("roast_unlocked") === "true") {
-      setUnlocked(true);
-    }
+    } else if (localStorage.getItem("villain_unlocked") === "true") setUnlocked(true);
   }, []);
 
   useEffect(() => {
-    if (step === "loading") { timerRef.current = setInterval(() => setTimer(t => t + 1), 1000); }
-    else { clearInterval(timerRef.current); setTimer(0); }
+    const t = setInterval(() => setCurseIdx(i => (i + 1) % CURSES.length), 3000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    if (loading) {
+      timerRef.current = setInterval(() => setLoadMsg(m => Math.min(m + 1, loadMessages.length - 1)), 2500);
+    } else { clearInterval(timerRef.current); setLoadMsg(0); }
     return () => clearInterval(timerRef.current);
-  }, [step]);
+  }, [loading]);
+
+  useEffect(() => {
+    if (result) {
+      let i = 0;
+      const t = setInterval(() => { setRevealStep(i); i++; if (i > 8) clearInterval(t); }, 400);
+    }
+  }, [result]);
 
   const submit = async () => {
-    if (!form.job.trim() || !form.finances.trim() || !form.goals.trim()) return;
-    if (localStorage.getItem("roast_used_free") === "true" && !unlocked) { setShowPaywall(true); return; }
-    setStep("loading"); setError("");
+    if (!situation.trim()) return;
+    if (localStorage.getItem("villain_used_free") === "true" && !unlocked) { setShowPaywall(true); return; }
+    setLoading(true); setStep("loading"); setError("");
     try {
       const res = await fetch("/api/roast", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          system: ROAST_SYSTEM,
-          messages: [{ role: "user", content: `JOB: ${form.job}\nRELATIONSHIP: ${form.relationship || "N/A"}\nFINANCES: ${form.finances}\nGOALS: ${form.goals}\n${form.wildcard ? "WILDCARD: " + form.wildcard : ""}\n\nRoast me. Then save me.` }]
+          system: SYSTEM,
+          messages: [{ role: "user", content: `WHO DID THIS: ${who || "someone in my life"}\n\nWHAT HAPPENED: ${situation}` }]
         })
       });
       const data = await res.json();
       const text = data.content.map(b => b.text || "").join("");
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
-      localStorage.setItem("roast_used_free", "true");
-      setResult(parsed); setStep("result");
+      localStorage.setItem("villain_used_free", "true");
+      setResult(parsed);
+      setStep("result");
+      setGlitchActive(true);
+      setTimeout(() => setGlitchActive(false), 2000);
     } catch (e) {
-      setError("AI was too stunned. Try again."); setStep("form");
-    }
+      setError("Something broke. Try again."); setStep("form");
+    } finally { setLoading(false); }
   };
 
-  const s = (v) => v >= 75 ? "#ff2d55" : v >= 45 ? "#ff9f0a" : "#30d158";
-
-  const styles = {
-    page: { minHeight: "100vh", background: "#0a0a0a", color: "#f0ead6", fontFamily: "Georgia, serif", padding: "0 24px 80px" },
-    wrap: { maxWidth: "660px", margin: "0 auto" },
-    btn: { background: "#ff2d55", color: "#fff", border: "none", borderRadius: "8px", padding: "16px 40px", fontFamily: "Georgia, serif", fontSize: "17px", fontWeight: "bold", cursor: "pointer" },
-    field: { background: "rgba(240,234,214,0.05)", border: "1px solid rgba(240,234,214,0.12)", borderRadius: "8px", color: "#f0ead6", fontFamily: "Georgia, serif", fontSize: "15px", padding: "14px 16px", width: "100%", boxSizing: "border-box", resize: "vertical", outline: "none" },
-    label: { display: "block", fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(240,234,214,0.4)", marginBottom: "8px" },
-    card: { borderRadius: "16px", padding: "28px", marginBottom: "20px" },
-  };
+  const scoreColor = (s) => s >= 80 ? "#ff2d55" : s >= 55 ? "#c084fc" : "#818cf8";
 
   return (
-    <div style={styles.page}>
-      {showPaywall && <PaywallModal onClose={() => setShowPaywall(false)} />}
-      <div style={styles.wrap}>
+    <div style={{
+      minHeight: "100vh",
+      background: "#050505",
+      color: "#e8e0d0",
+      fontFamily: "'Cormorant Garamond', 'Georgia', serif",
+      position: "relative",
+      overflowX: "hidden",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;0,700;1,300;1,400;1,600&display=swap');
+        * { box-sizing: border-box; }
+        ::selection { background: rgba(192,132,252,0.3); }
+        @keyframes fadeUp { from { opacity:0; transform:translateY(32px); } to { opacity:1; transform:translateY(0); } }
+        @keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+        @keyframes flicker { 0%,100%{opacity:1} 92%{opacity:1} 93%{opacity:0.4} 94%{opacity:1} 97%{opacity:0.7} 98%{opacity:1} }
+        @keyframes scanline { from{transform:translateY(-100%)} to{transform:translateY(100vh)} }
+        @keyframes pulse { 0%,100%{opacity:0.4} 50%{opacity:1} }
+        @keyframes slideIn { from{opacity:0;transform:translateX(-20px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes breathe { 0%,100%{transform:scale(1)} 50%{transform:scale(1.02)} }
+        .reveal-0 { animation: fadeUp 0.7s 0s ease both; }
+        .reveal-1 { animation: fadeUp 0.7s 0.15s ease both; }
+        .reveal-2 { animation: fadeUp 0.7s 0.3s ease both; }
+        .reveal-3 { animation: fadeUp 0.7s 0.45s ease both; }
+        .reveal-4 { animation: fadeUp 0.7s 0.6s ease both; }
+        .reveal-5 { animation: fadeUp 0.7s 0.75s ease both; }
+        .reveal-6 { animation: fadeUp 0.7s 0.9s ease both; }
+        .reveal-7 { animation: fadeUp 0.7s 1.05s ease both; }
+        .flicker { animation: flicker 8s infinite; }
+        .breathe { animation: breathe 4s ease-in-out infinite; }
+        textarea:focus { outline: none; border-color: rgba(192,132,252,0.5) !important; background: rgba(192,132,252,0.04) !important; }
+        textarea::placeholder { color: rgba(232,224,208,0.2); font-style: italic; font-family: 'Cormorant Garamond', serif; }
+        .btn-main { background: transparent; border: 1px solid rgba(232,224,208,0.3); color: #e8e0d0; padding: 14px 48px; font-family: 'Cormorant Garamond', serif; font-size: 18px; letter-spacing: 0.15em; text-transform: uppercase; cursor: pointer; transition: all 0.3s; position: relative; overflow: hidden; }
+        .btn-main::before { content: ''; position: absolute; inset: 0; background: linear-gradient(135deg, rgba(192,132,252,0.1), rgba(255,45,85,0.1)); opacity: 0; transition: opacity 0.3s; }
+        .btn-main:hover { border-color: rgba(192,132,252,0.6); color: #fff; }
+        .btn-main:hover::before { opacity: 1; }
+        .btn-main:disabled { opacity: 0.3; cursor: not-allowed; }
+        .card { border: 1px solid rgba(232,224,208,0.07); border-radius: 2px; padding: 28px 32px; margin-bottom: 16px; position: relative; }
+        .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px; }
+      `}</style>
 
-        {step === "intro" && (
-          <div style={{ textAlign: "center", paddingTop: "80px" }}>
-            <div style={{ fontSize: "60px", marginBottom: "8px" }}>🔥</div>
-            <h1 style={{ fontSize: "48px", fontWeight: "bold", margin: "0 0 12px" }}>Roast My Life</h1>
-            <p style={{ fontSize: "19px", color: "rgba(240,234,214,0.55)", margin: "0 0 6px", fontStyle: "italic" }}>AI roasts your choices. Then saves you from yourself.</p>
-            <p style={{ fontSize: "13px", color: "rgba(240,234,214,0.3)", margin: "0 0 48px" }}>First roast free · Results in under 90 seconds</p>
-            <div style={{ display: "flex", gap: "32px", justifyContent: "center", marginBottom: "48px" }}>
-              {[["💀", "Brutally honest"], ["📋", "Real 90-day plan"], ["📸", "Screenshot-worthy"]].map(([icon, label]) => (
-                <div key={label} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: "26px", marginBottom: "4px" }}>{icon}</div>
-                  <div style={{ fontSize: "12px", color: "rgba(240,234,214,0.4)" }}>{label}</div>
-                </div>
-              ))}
-            </div>
-            <button style={styles.btn} onClick={() => setStep("form")}>Roast me →</button>
-          </div>
-        )}
+      {/* Scanline effect */}
+      <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 100, overflow: "hidden" }}>
+        <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px)", pointerEvents: "none" }} />
+      </div>
 
-        {step === "form" && (
-          <div style={{ paddingTop: "56px" }}>
-            <button onClick={() => setStep("intro")} style={{ background: "none", border: "none", color: "rgba(240,234,214,0.35)", cursor: "pointer", fontSize: "13px", marginBottom: "28px", fontFamily: "Georgia, serif", padding: 0 }}>← back</button>
-            <h2 style={{ fontSize: "26px", margin: "0 0 6px" }}>Tell me everything.</h2>
-            <p style={{ color: "rgba(240,234,214,0.45)", margin: "0 0 36px", fontStyle: "italic" }}>The more honest you are, the harder the roast.</p>
-            <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-              {[
-                { key: "job", label: "Job / Career *", ph: "e.g. 28, same dead-end job for 3 years..." },
-                { key: "relationship", label: "Relationship status", ph: "e.g. Single for 4 years..." },
-                { key: "finances", label: "Finances *", ph: "e.g. $4k in credit card debt, no savings..." },
-                { key: "goals", label: "Goals / Dreams *", ph: "e.g. Want to start a business, travel more..." },
-                { key: "wildcard", label: "Wildcard (optional)", ph: "e.g. I still text my ex..." },
-              ].map(({ key, label, ph }) => (
-                <div key={key}>
-                  <label style={styles.label}>{label}</label>
-                  <textarea style={styles.field} rows={2} placeholder={ph} value={form[key]} onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))} />
-                </div>
-              ))}
-              {error && <div style={{ color: "#ff6b80", fontSize: "14px" }}>{error}</div>}
-              <button style={{ ...styles.btn, width: "100%", opacity: (!form.job.trim() || !form.finances.trim() || !form.goals.trim()) ? 0.4 : 1 }} onClick={submit} disabled={!form.job.trim() || !form.finances.trim() || !form.goals.trim()}>
-                🔥 Roast me now
-              </button>
-            </div>
-          </div>
-        )}
+      {/* Ambient orbs */}
+      <div style={{ position: "fixed", top: "10%", right: "-10%", width: "500px", height: "500px", borderRadius: "50%", background: "radial-gradient(circle, rgba(192,132,252,0.06) 0%, transparent 70%)", pointerEvents: "none" }} />
+      <div style={{ position: "fixed", bottom: "0", left: "-10%", width: "400px", height: "400px", borderRadius: "50%", background: "radial-gradient(circle, rgba(255,45,85,0.05) 0%, transparent 70%)", pointerEvents: "none" }} />
 
-        {step === "loading" && (
-          <div style={{ paddingTop: "120px", textAlign: "center" }}>
-            <div style={{ fontSize: "48px", marginBottom: "24px" }}>🔥</div>
-            <h2 style={{ fontSize: "22px", margin: "0 0 10px" }}>Analyzing your choices...</h2>
-            <p style={{ color: "rgba(240,234,214,0.4)", fontStyle: "italic" }}>
-              {timer < 10 ? "Reading between the lines..." : timer < 25 ? "Counting the red flags..." : "Building your escape plan..."}
+      {/* Paywall */}
+      {showPaywall && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.92)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", animation: "fadeIn 0.3s ease" }}>
+          <div style={{ maxWidth: "440px", width: "100%", border: "1px solid rgba(192,132,252,0.3)", padding: "48px 40px", textAlign: "center", background: "#080808" }}>
+            <div style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(192,132,252,0.6)", marginBottom: "24px" }}>Your free session is complete</div>
+            <h2 style={{ fontSize: "32px", fontWeight: 300, margin: "0 0 12px", lineHeight: 1.2 }}>The villain era<br /><em>doesn't end here.</em></h2>
+            <p style={{ color: "rgba(232,224,208,0.45)", margin: "0 0 36px", fontSize: "16px", lineHeight: 1.7 }}>
+              Unlimited rewrites. Every situation. Every person who pushed you too far.
             </p>
-            <p style={{ color: "rgba(240,234,214,0.25)", fontSize: "13px", marginTop: "16px" }}>{timer}s</p>
+            <div style={{ fontSize: "48px", fontWeight: 300, color: "#c084fc", marginBottom: "4px" }}>$4.99</div>
+            <div style={{ fontSize: "13px", color: "rgba(232,224,208,0.3)", letterSpacing: "0.1em", marginBottom: "32px" }}>PER MONTH · CANCEL ANYTIME</div>
+            <button className="btn-main" style={{ width: "100%", marginBottom: "16px" }} onClick={async () => {
+              try {
+                const res = await fetch("/api/create-checkout", { method: "POST" });
+                const d = await res.json();
+                if (d.url) window.location.href = d.url;
+              } catch { alert("Error. Try again."); }
+            }}>Enter the era →</button>
+            <button onClick={() => setShowPaywall(false)} style={{ background: "none", border: "none", color: "rgba(232,224,208,0.25)", fontSize: "13px", cursor: "pointer", fontFamily: "Cormorant Garamond, serif", letterSpacing: "0.05em" }}>Not yet</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ maxWidth: "720px", margin: "0 auto", padding: "0 28px 100px", position: "relative", zIndex: 1 }}>
+
+        {/* INTRO */}
+        {step === "intro" && (
+          <div style={{ paddingTop: "100px" }}>
+            <div className="reveal-0" style={{ marginBottom: "80px" }}>
+              <div style={{ fontSize: "11px", letterSpacing: "0.25em", textTransform: "uppercase", color: "rgba(192,132,252,0.6)", marginBottom: "24px" }}>
+                A reckoning
+              </div>
+              <h1 className="flicker" style={{ fontSize: "clamp(56px, 10vw, 96px)", fontWeight: 300, margin: "0 0 8px", lineHeight: 1, letterSpacing: "-0.02em" }}>
+                Villain Era
+              </h1>
+              <p style={{ fontSize: "clamp(20px,3vw,26px)", fontWeight: 300, color: "rgba(232,224,208,0.5)", fontStyle: "italic", margin: 0 }}>
+                Stop shrinking. Start rewriting.
+              </p>
+            </div>
+
+            <div className="reveal-1" style={{ borderLeft: "1px solid rgba(192,132,252,0.3)", paddingLeft: "24px", marginBottom: "64px" }}>
+              <p style={{ fontSize: "18px", lineHeight: 1.8, color: "rgba(232,224,208,0.65)", margin: "0 0 16px", fontWeight: 300 }}>
+                You stayed quiet when you should have spoken.<br />
+                You said yes when every part of you said no.<br />
+                You made yourself smaller so someone else could feel bigger.
+              </p>
+              <p style={{ fontSize: "18px", lineHeight: 1.8, color: "rgba(232,224,208,0.9)", margin: 0, fontStyle: "italic" }}>
+                That ends today.
+              </p>
+            </div>
+
+            <div className="reveal-2" style={{ marginBottom: "64px" }}>
+              <div style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(232,224,208,0.25)", marginBottom: "20px" }}>What you get</div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
+                {[
+                  ["Your words back", "Exactly what you should have said — calm, clear, devastating"],
+                  ["Your villain title", "The version of you that doesn't apologize for existing"],
+                  ["Your diagnosis", "Named, seen, validated — no more gaslighting yourself"],
+                  ["Your mantra", "Six words to carry into every room from now on"],
+                ].map(([title, desc]) => (
+                  <div key={title} style={{ border: "1px solid rgba(232,224,208,0.06)", padding: "20px", borderRadius: "2px" }}>
+                    <div style={{ fontSize: "15px", fontWeight: 600, marginBottom: "6px", color: "#e8e0d0" }}>{title}</div>
+                    <div style={{ fontSize: "13px", color: "rgba(232,224,208,0.4)", lineHeight: 1.6 }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="reveal-3" style={{ marginBottom: "48px", padding: "20px 24px", borderLeft: "2px solid rgba(192,132,252,0.3)", background: "rgba(192,132,252,0.03)" }}>
+              <div style={{ fontSize: "16px", fontStyle: "italic", color: "rgba(232,224,208,0.6)", animation: "fadeIn 0.5s ease", lineHeight: 1.7 }}>
+                "{CURSES[curseIdx]}"
+              </div>
+            </div>
+
+            <div className="reveal-4">
+              <button className="btn-main" onClick={() => setStep("form")}>
+                Reclaim yourself →
+              </button>
+              <div style={{ marginTop: "16px", fontSize: "12px", color: "rgba(232,224,208,0.2)", letterSpacing: "0.1em" }}>
+                FIRST SESSION FREE · $4.99/MO AFTER
+              </div>
+            </div>
           </div>
         )}
 
+        {/* FORM */}
+        {step === "form" && (
+          <div style={{ paddingTop: "80px" }}>
+            <button onClick={() => setStep("intro")} style={{ background: "none", border: "none", color: "rgba(232,224,208,0.3)", cursor: "pointer", fontSize: "13px", marginBottom: "48px", fontFamily: "Cormorant Garamond, serif", letterSpacing: "0.1em", padding: 0 }}>
+              ← back
+            </button>
+
+            <div className="reveal-0" style={{ marginBottom: "48px" }}>
+              <h2 style={{ fontSize: "36px", fontWeight: 300, margin: "0 0 8px" }}>Tell me what happened.</h2>
+              <p style={{ fontSize: "16px", color: "rgba(232,224,208,0.4)", fontStyle: "italic", margin: 0 }}>
+                Don't soften it. Don't make excuses for them. Just tell the truth.
+              </p>
+            </div>
+
+            <div className="reveal-1" style={{ marginBottom: "28px" }}>
+              <label style={{ display: "block", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,224,208,0.35)", marginBottom: "10px" }}>
+                Who did this to you? (optional)
+              </label>
+              <textarea
+                rows={1}
+                placeholder="e.g. my manager, my ex, my mother, my friend of 10 years..."
+                value={who}
+                onChange={e => setWho(e.target.value)}
+                style={{ background: "rgba(232,224,208,0.03)", border: "1px solid rgba(232,224,208,0.1)", borderRadius: "2px", color: "#e8e0d0", fontFamily: "Cormorant Garamond, serif", fontSize: "17px", padding: "16px 20px", width: "100%", resize: "none", lineHeight: 1.5 }}
+              />
+            </div>
+
+            <div className="reveal-2" style={{ marginBottom: "36px" }}>
+              <label style={{ display: "block", fontSize: "11px", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,224,208,0.35)", marginBottom: "10px" }}>
+                What happened? *
+              </label>
+              <textarea
+                rows={6}
+                placeholder="e.g. I've been covering for my manager for two years. She takes credit for my work in every meeting. Last week she told the CEO that the project I built alone was 'her vision.' I said nothing. I smiled. I even congratulated her after. I don't recognize myself anymore..."
+                value={situation}
+                onChange={e => setSituation(e.target.value)}
+                style={{ background: "rgba(232,224,208,0.03)", border: "1px solid rgba(232,224,208,0.1)", borderRadius: "2px", color: "#e8e0d0", fontFamily: "Cormorant Garamond, serif", fontSize: "17px", padding: "16px 20px", width: "100%", resize: "vertical", lineHeight: 1.7 }}
+              />
+            </div>
+
+            {error && <div style={{ color: "#ff6b80", fontSize: "14px", marginBottom: "16px" }}>{error}</div>}
+
+            <div className="reveal-3">
+              <button className="btn-main" onClick={submit} disabled={!situation.trim()}>
+                Begin the reckoning →
+              </button>
+              <div style={{ marginTop: "12px", fontSize: "12px", color: "rgba(232,224,208,0.2)", letterSpacing: "0.08em" }}>
+                Your words are never stored or shared.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* LOADING */}
+        {step === "loading" && (
+          <div style={{ paddingTop: "140px", textAlign: "center" }}>
+            <div style={{ marginBottom: "40px" }}>
+              <div style={{ width: "1px", height: "80px", background: "linear-gradient(to bottom, transparent, rgba(192,132,252,0.8), transparent)", margin: "0 auto", animation: "pulse 1.5s ease-in-out infinite" }} />
+            </div>
+            <p style={{ fontSize: "22px", fontWeight: 300, fontStyle: "italic", color: "rgba(232,224,208,0.7)", margin: "0 0 12px", letterSpacing: "0.02em", animation: "fadeIn 0.5s ease" }}>
+              {loadMessages[loadMsg]}
+            </p>
+            <p style={{ fontSize: "12px", letterSpacing: "0.15em", textTransform: "uppercase", color: "rgba(232,224,208,0.2)" }}>
+              This takes about 30 seconds
+            </p>
+          </div>
+        )}
+
+        {/* RESULT */}
         {step === "result" && result && (
-          <div style={{ paddingTop: "48px" }}>
-            <div style={{ ...styles.card, background: "rgba(255,45,85,0.06)", border: "1px solid rgba(255,45,85,0.2)", textAlign: "center" }}>
-              <p style={{ fontSize: "11px", textTransform: "uppercase", letterSpacing: "0.1em", color: "rgba(240,234,214,0.35)", margin: "0 0 12px" }}>Chaos Score</p>
-              <div style={{ fontSize: "64px", fontWeight: "bold", color: s(result.savageScore) }}>{result.savageScore}</div>
-              <div style={{ fontSize: "18px", fontWeight: "bold", color: s(result.savageScore), marginBottom: "8px" }}>{result.savageScoreLabel}</div>
-              <h2 style={{ fontSize: "20px", margin: 0, fontStyle: "italic" }}>"{result.roastTitle}"</h2>
+          <div style={{ paddingTop: "72px" }}>
+
+            {/* Title + Score */}
+            <div className="reveal-0" style={{ textAlign: "center", marginBottom: "48px", padding: "48px 32px", border: "1px solid rgba(192,132,252,0.15)", background: "rgba(192,132,252,0.03)", position: "relative", overflow: "hidden" }}>
+              <div style={{ position: "absolute", inset: 0, backgroundImage: "radial-gradient(ellipse at 50% 0%, rgba(192,132,252,0.08) 0%, transparent 60%)", pointerEvents: "none" }} />
+              <div style={{ fontSize: "11px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(192,132,252,0.5)", marginBottom: "16px" }}>You have entered</div>
+              <h2 style={{ fontSize: "clamp(32px,6vw,52px)", fontWeight: 300, margin: "0 0 24px", lineHeight: 1.1 }}>
+                <GlitchText text={result.villainTitle} active={glitchActive} />
+              </h2>
+              <ScoreRing score={result.villainScore} color={scoreColor(result.villainScore)} />
             </div>
 
-            <div style={{ ...styles.card, background: "rgba(240,234,214,0.03)", border: "1px solid rgba(240,234,214,0.08)" }}>
-              <p style={styles.label}>🔥 The Roast</p>
-              {result.roastLines.map((line, i) => (
-                <p key={i} style={{ margin: i === 0 ? 0 : "14px 0 0", fontSize: "15px", lineHeight: 1.6, paddingLeft: "14px", borderLeft: "2px solid rgba(255,45,85,0.3)" }}>{line}</p>
-              ))}
+            {/* Diagnosis */}
+            <div className="reveal-1 card" style={{ borderColor: "rgba(255,45,85,0.15)", background: "rgba(255,45,85,0.03)" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(255,45,85,0.5)", marginBottom: "14px" }}>What actually happened</div>
+              <p style={{ fontSize: "20px", fontWeight: 400, lineHeight: 1.6, margin: 0, fontStyle: "italic", color: "rgba(232,224,208,0.9)" }}>
+                "{result.diagnosis}"
+              </p>
             </div>
 
-            <div style={{ ...styles.card, background: "rgba(255,159,10,0.05)", border: "1px solid rgba(255,159,10,0.15)" }}>
-              <p style={{ ...styles.label, color: "rgba(255,159,10,0.55)" }}>🚩 Red Flags</p>
-              {result.redFlags.map((flag, i) => (
-                <div key={i} style={{ display: "flex", gap: "10px", marginTop: i === 0 ? 0 : "10px" }}>
-                  <span style={{ color: "#ff9f0a" }}>▸</span>
-                  <span style={{ fontSize: "14px", lineHeight: 1.5 }}>{flag}</span>
+            {/* What they actually felt */}
+            <div className="reveal-2 card" style={{ borderColor: "rgba(232,224,208,0.07)" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(232,224,208,0.3)", marginBottom: "14px" }}>What you were actually feeling</div>
+              <p style={{ fontSize: "17px", lineHeight: 1.8, margin: 0, color: "rgba(232,224,208,0.7)", fontStyle: "italic" }}>
+                {result.whatTheyActuallyFelt}
+              </p>
+            </div>
+
+            {/* The Rewrite — hero section */}
+            <div className="reveal-3 card" style={{ borderColor: "rgba(192,132,252,0.2)", background: "rgba(192,132,252,0.04)", padding: "36px 32px" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(192,132,252,0.6)", marginBottom: "20px" }}>What you should have said — and can say now</div>
+              <p style={{ fontSize: "20px", lineHeight: 1.9, margin: 0, color: "#e8e0d0", fontWeight: 400 }}>
+                {result.rewrite}
+              </p>
+            </div>
+
+            {/* They were wrong */}
+            <div className="reveal-4 card">
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(232,224,208,0.3)", marginBottom: "16px" }}>What they did wrong</div>
+              {result.theyWereWrong.map((item, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", marginBottom: i < result.theyWereWrong.length - 1 ? "12px" : 0 }}>
+                  <span style={{ color: "rgba(255,45,85,0.6)", flexShrink: 0, marginTop: "2px" }}>—</span>
+                  <span style={{ fontSize: "16px", lineHeight: 1.6, color: "rgba(232,224,208,0.7)" }}>{item}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ ...styles.card, background: "rgba(48,209,88,0.04)", border: "1px solid rgba(48,209,88,0.15)" }}>
-              <p style={{ ...styles.label, color: "rgba(48,209,88,0.55)" }}>📋 90-Day Rescue Plan</p>
-              {result.plan.map((p, i) => (
-                <div key={i} style={{ display: "flex", gap: "14px", marginTop: i === 0 ? 0 : "18px" }}>
-                  <div style={{ flexShrink: 0, background: "rgba(48,209,88,0.1)", border: "1px solid rgba(48,209,88,0.2)", borderRadius: "7px", padding: "5px 9px", fontSize: "11px", color: "#30d158", whiteSpace: "nowrap" }}>{p.day}</div>
-                  <div>
-                    <p style={{ margin: "0 0 3px", fontSize: "15px", fontWeight: "bold" }}>{p.action}</p>
-                    <p style={{ margin: 0, fontSize: "13px", color: "rgba(240,234,214,0.42)", fontStyle: "italic" }}>{p.why}</p>
-                  </div>
+            {/* Boundaries */}
+            <div className="reveal-5 card" style={{ borderColor: "rgba(129,140,248,0.15)", background: "rgba(129,140,248,0.03)" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(129,140,248,0.5)", marginBottom: "16px" }}>Your boundaries going forward</div>
+              {result.boundaries.map((b, i) => (
+                <div key={i} style={{ display: "flex", gap: "14px", marginBottom: i < result.boundaries.length - 1 ? "12px" : 0 }}>
+                  <span style={{ color: "rgba(129,140,248,0.5)", flexShrink: 0 }}>→</span>
+                  <span style={{ fontSize: "16px", lineHeight: 1.6, color: "rgba(232,224,208,0.75)" }}>{b}</span>
                 </div>
               ))}
             </div>
 
-            <div style={{ ...styles.card, background: "rgba(255,45,85,0.06)", border: "1px solid rgba(255,45,85,0.18)", textAlign: "center" }}>
-              <p style={styles.label}>⚖️ Final Verdict</p>
-              <p style={{ margin: 0, fontSize: "16px", lineHeight: 1.6, fontStyle: "italic" }}>"{result.verdict}"</p>
+            {/* Mantra */}
+            <div className="reveal-6" style={{ margin: "32px 0", padding: "40px 32px", textAlign: "center", border: "1px solid rgba(192,132,252,0.2)", background: "rgba(192,132,252,0.04)", position: "relative" }}>
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(192,132,252,0.4)", marginBottom: "20px" }}>Your mantra</div>
+              <p className="breathe" style={{ fontSize: "clamp(22px,4vw,34px)", fontWeight: 300, fontStyle: "italic", margin: 0, lineHeight: 1.4, color: "#e8e0d0", letterSpacing: "0.02em" }}>
+                "{result.mantra}"
+              </p>
             </div>
 
-            <div style={{ ...styles.card, background: "rgba(240,234,214,0.03)", border: "1px solid rgba(240,234,214,0.08)" }}>
-              <p style={styles.label}>📸 Share this</p>
-              <p style={{ margin: "0 0 14px", fontSize: "15px", fontStyle: "italic", color: "rgba(240,234,214,0.65)" }}>"{result.shareQuote}"</p>
-              <button onClick={() => { navigator.clipboard.writeText(`"${result.shareQuote}" 💀\n\nroast-my-life.vercel.app`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
-                style={{ background: "rgba(240,234,214,0.06)", border: "1px solid rgba(240,234,214,0.1)", borderRadius: "8px", color: "rgba(240,234,214,0.55)", padding: "10px 20px", cursor: "pointer", fontSize: "13px", fontFamily: "Georgia, serif", width: "100%" }}>
-                {copied ? "✓ Copied!" : "Copy to share →"}
+            {/* Share */}
+            <div className="reveal-7 card">
+              <div style={{ fontSize: "10px", letterSpacing: "0.2em", textTransform: "uppercase", color: "rgba(232,224,208,0.25)", marginBottom: "14px" }}>Share your reckoning</div>
+              <p style={{ fontSize: "16px", fontStyle: "italic", color: "rgba(232,224,208,0.55)", margin: "0 0 16px", lineHeight: 1.7 }}>
+                "{result.shareQuote}"
+              </p>
+              <button
+                onClick={() => { navigator.clipboard.writeText(`"${result.shareQuote}"\n\n— villain era\nvillaineRA.vercel.app`); setCopied(true); setTimeout(() => setCopied(false), 2000); }}
+                style={{ background: copied ? "rgba(192,132,252,0.1)" : "rgba(232,224,208,0.04)", border: `1px solid ${copied ? "rgba(192,132,252,0.3)" : "rgba(232,224,208,0.1)"}`, borderRadius: "2px", color: copied ? "#c084fc" : "rgba(232,224,208,0.4)", padding: "12px 24px", cursor: "pointer", fontSize: "13px", fontFamily: "Cormorant Garamond, serif", letterSpacing: "0.1em", textTransform: "uppercase", width: "100%", transition: "all 0.2s" }}>
+                {copied ? "✓ Copied" : "Copy to share"}
               </button>
             </div>
 
-            <div style={{ textAlign: "center" }}>
-              <button style={styles.btn} onClick={() => { setStep("form"); setResult(null); setForm({ job: "", relationship: "", finances: "", goals: "", wildcard: "" }); }}>
-                Roast someone else →
+            {/* Go again */}
+            <div style={{ textAlign: "center", marginTop: "40px" }}>
+              <button className="btn-main" onClick={() => { setStep("form"); setResult(null); setSituation(""); setWho(""); setRevealStep(0); }}>
+                Another situation →
               </button>
+              <p style={{ marginTop: "14px", fontSize: "12px", color: "rgba(232,224,208,0.2)", letterSpacing: "0.08em" }}>
+                Send this to someone who needs it
+              </p>
             </div>
           </div>
         )}
