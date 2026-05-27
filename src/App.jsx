@@ -145,7 +145,7 @@ export default function VillainEra() {
         })
       });
       const data = await res.json();
-      const text = data.content.map(b => b.text || "").join("");
+      if (!data.content) throw new Error("API Error: " + JSON.stringify(data));
       const parsed = JSON.parse(text.replace(/```json|```/g, "").trim());
       localStorage.setItem("villain_used_free", "true");
       setResult(parsed);
