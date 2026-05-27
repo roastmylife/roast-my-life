@@ -153,7 +153,7 @@ export default function VillainEra() {
       setGlitchActive(true);
       setTimeout(() => setGlitchActive(false), 2000);
     } catch (e) {
-      setError("Something broke. Try again."); setStep("form");
+      setError("Error: " + e.message); setStep("form");
     } finally { setLoading(false); }
   };
 
